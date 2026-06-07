@@ -39,4 +39,5 @@ Workflow: [`.github/workflows/deploy-pages.yml`](.github/workflows/deploy-pages.
 3. **Apps Script** — Web app should use **Execute as: Me** and **Who has access: Anyone**. After editing the script, create a **new version** of the deployment.
 4. **Where email goes** — Set in `google-apps-script/Code.gs` as **`NOTIFICATION_EMAIL`**. Change it there if a different inbox should receive waivers, then redeploy the web app.
 5. **Execution log** — In the Apps Script editor, open **Executions** and check for errors when you submit (e.g. payload parse, quota, MailApp).
-6. **Browser** — The form POST uses `no-cors`, so the Network tab will not show whether Google returned success or failure; rely on the secret, `gas-webapp.json`, and the Executions log.
+6. **Large PDF / POST body** — `doPost` parses `e.postData.contents` first so huge `payload=` (PDF base64) is not truncated via `e.parameter`. After updating `Code.gs`, **redeploy** the web app (Manage deployments → New version).
+7. **Browser** — The form POST uses `no-cors`, so the Network tab will not show whether Google returned success or failure; rely on the secret, `gas-webapp.json`, and the Executions log.

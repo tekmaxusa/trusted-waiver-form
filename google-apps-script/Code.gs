@@ -316,16 +316,20 @@ function buildWaiverSummaryHtml_(postData, servicesLine, skinLine, mq, signature
 function doPost(e) {
   try {
     var postData;
-    if (e && e.parameter && e.parameter.payload) {
-      postData = JSON.parse(e.parameter.payload);
-    } else if (e && e.postData && e.postData.contents) {
+    // Prefer raw post body: e.parameter.payload can truncate very large form fields (big PDF base64).
+    if (e && e.postData && e.postData.contents) {
       var raw = String(e.postData.contents);
+      Logger.log('doPost postData.length=' + (e.postData.length || raw.length));
       if (raw.indexOf('payload=') === 0) {
         postData = JSON.parse(decodeURIComponent(raw.substring('payload='.length)));
-      } else {
+      } else if (raw.charAt(0) === '{') {
         postData = JSON.parse(raw);
       }
-    } else {
+    }
+    if (!postData && e && e.parameter && e.parameter.payload) {
+      postData = JSON.parse(e.parameter.payload);
+    }
+    if (!postData) {
       throw new Error('Empty POST body. Redeploy web app and use the latest waiver form.');
     }
     Logger.log('doPost ok parse client=' + (postData.clientName || '?'));
@@ -453,7 +457,13 @@ function doPost(e) {
         Logger.log('GmailApp.sendEmail failed: ' + gErr);
         try {
           sentSubject =
-            'New Waiver Submission - Centennial - ' + clientName + ' (retry, no PDF) (ref ' + waiverRef + ')';
+            'New Waiver Submission - ' +
+            locForSubject +
+            ' - ' +
+            clientName +
+            ' (retry, no PDF) (ref ' +
+            waiverRef +
+            ')';
           MailApp.sendEmail({
             to: NOTIFICATION_EMAIL,
             subject: sentSubject,
