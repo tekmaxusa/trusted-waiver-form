@@ -1,6 +1,7 @@
 import {effectiveAssetsBase} from './publicAsset';
 
-let cachedJsonUrl: string | null | undefined;
+/** Only cache a resolved URL; do not cache failures (so retries work after fixing deploy). */
+let cachedJsonUrl: string | undefined;
 
 function fromEnvOrStorage(): string | null {
   const env = import.meta.env.VITE_GAS_WEBAPP_URL as string | undefined;
@@ -26,15 +27,12 @@ export async function resolveGasWebAppUrl(): Promise<string | null> {
   const direct = fromEnvOrStorage();
   if (direct) return direct;
 
-  if (cachedJsonUrl !== undefined) return cachedJsonUrl;
+  if (cachedJsonUrl) return cachedJsonUrl;
 
   try {
     const base = effectiveAssetsBase();
     const res = await fetch(`${base}gas-webapp.json`, {cache: 'no-store'});
-    if (!res.ok) {
-      cachedJsonUrl = null;
-      return null;
-    }
+    if (!res.ok) return null;
     const j = (await res.json()) as {gasWebAppUrl?: string};
     const u = (j.gasWebAppUrl || '').trim();
     if (u.startsWith('https://script.google.com')) {
@@ -44,6 +42,5 @@ export async function resolveGasWebAppUrl(): Promise<string | null> {
   } catch {
     /* network / parse */
   }
-  cachedJsonUrl = null;
   return null;
 }

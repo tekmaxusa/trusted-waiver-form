@@ -26,3 +26,14 @@ The live site will be at `https://tekmaxusa.github.io/saheli-waiver-form/` (path
 ## GitHub Actions
 
 Workflow: [`.github/workflows/deploy-pages.yml`](.github/workflows/deploy-pages.yml).
+
+## Walang email / troubleshooting
+
+1. **GitHub secret** — Dapat naka-set ang **`VITE_GAS_WEBAPP_URL`** (buong URL, nagsisimula sa `https://script.google.com/.../exec`). Pag walang secret o maling URL, walang maipopost sa Apps Script.
+2. **Tingnan ang `gas-webapp.json`** — Buksan sa browser:  
+   `https://<user>.github.io/<repo-name>/gas-webapp.json`  
+   Dapat may `"gasWebAppUrl":"https://script.google.com/..."`. Kung `""` lang, kulang ang secret o kailangan i-run ulit ang deploy workflow.
+3. **Apps Script** — Web app dapat **Execute as: Me**, **Who has access: Anyone**. Pagkatapos mag-edit ng script, **bagong version** ng deployment.
+4. **Saan padadala ang email** — Naka-define sa `google-apps-script/Code.gs` ang **`NOTIFICATION_EMAIL`** (sa repo hal. `yu.jeremiah612@gmail.com`). I-edit iyon kung ibang inbox ang dapat tumanggap, tapos i-redeploy ang web app.
+5. **Execution log** — Sa Apps Script editor: **Executions** — tingnan kung may error pag submit (hal. payload parse, quota, MailApp).
+6. **Browser** — Ang POST ay `no-cors`, kaya hindi makikita sa Network tab kung 200 o error ang sagot ng Google; kaya mahalaga ang secret + Executions log.
