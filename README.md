@@ -27,13 +27,11 @@ The live site will be at `https://tekmaxusa.github.io/saheli-waiver-form/` (path
 
 Workflow: [`.github/workflows/deploy-pages.yml`](.github/workflows/deploy-pages.yml).
 
-## Walang email / troubleshooting
+## Email not received / troubleshooting
 
-1. **GitHub secret** — Dapat naka-set ang **`VITE_GAS_WEBAPP_URL`** (buong URL, nagsisimula sa `https://script.google.com/.../exec`). Pag walang secret o maling URL, walang maipopost sa Apps Script.
-2. **Tingnan ang `gas-webapp.json`** — Buksan sa browser:  
-   `https://<user>.github.io/<repo-name>/gas-webapp.json`  
-   Dapat may `"gasWebAppUrl":"https://script.google.com/..."`. Kung `""` lang, kulang ang secret o kailangan i-run ulit ang deploy workflow.
-3. **Apps Script** — Web app dapat **Execute as: Me**, **Who has access: Anyone**. Pagkatapos mag-edit ng script, **bagong version** ng deployment.
-4. **Saan padadala ang email** — Naka-define sa `google-apps-script/Code.gs` ang **`NOTIFICATION_EMAIL`** (sa repo hal. `yu.jeremiah612@gmail.com`). I-edit iyon kung ibang inbox ang dapat tumanggap, tapos i-redeploy ang web app.
-5. **Execution log** — Sa Apps Script editor: **Executions** — tingnan kung may error pag submit (hal. payload parse, quota, MailApp).
-6. **Browser** — Ang POST ay `no-cors`, kaya hindi makikita sa Network tab kung 200 o error ang sagot ng Google; kaya mahalaga ang secret + Executions log.
+1. **GitHub secret** — **`VITE_GAS_WEBAPP_URL`** must be set to your full URL (starts with `https://script.google.com/...` and ends with `/exec`). If it is missing or wrong, nothing is posted to Apps Script.
+2. **`gas-webapp.json`** — In your browser open `https://<user>.github.io/<repo-name>/gas-webapp.json`. You should see `"gasWebAppUrl":"https://script.google.com/..."`. If it is empty, add or fix the secret and run the deploy workflow again.
+3. **Apps Script** — Web app should use **Execute as: Me** and **Who has access: Anyone**. After editing the script, create a **new version** of the deployment.
+4. **Where email goes** — Set in `google-apps-script/Code.gs` as **`NOTIFICATION_EMAIL`**. Change it there if a different inbox should receive waivers, then redeploy the web app.
+5. **Execution log** — In the Apps Script editor, open **Executions** and check for errors when you submit (e.g. payload parse, quota, MailApp).
+6. **Browser** — The form POST uses `no-cors`, so the Network tab will not show whether Google returned success or failure; rely on the secret, `gas-webapp.json`, and the Executions log.

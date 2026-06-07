@@ -271,10 +271,9 @@ export default function WaiverForm({ onSubmitSuccess }: WaiverFormProps) {
           'Waiver PDF generated locally. Set GitHub Actions secret VITE_GAS_WEBAPP_URL, add VITE_GAS_WEBAPP_URL to .env.local, copy public/gas-webapp.example.json to public/gas-webapp.json, or set localStorage key saheli_waiver_gas_url to your Apps Script /exec URL.'
         );
         alert(
-          'Walang naka-link na Google Apps Script URL ang site na ito, kaya hindi naipadala ang waiver sa server at walang email na lalabas.\n\n' +
-            'Sa GitHub: Settings → Secrets and variables → Actions → idagdag ang VITE_GAS_WEBAPP_URL (buong /exec URL).\n\n' +
-            'Pagkatapos, i-redeploy ang Pages. I-check din sa browser ang …/gas-webapp.json — dapat may laman ang gasWebAppUrl.\n\n' +
-            'This site has no Apps Script URL configured, so nothing was posted and no email will be sent. Add the VITE_GAS_WEBAPP_URL secret and redeploy.'
+          'This site has no Google Apps Script URL configured, so your waiver was not sent to the server and no notification email will be sent.\n\n' +
+            'Fix: In GitHub go to Settings → Secrets and variables → Actions and add VITE_GAS_WEBAPP_URL with your full web app URL (must start with https://script.google.com/ and end with /exec). Then redeploy GitHub Pages.\n\n' +
+            'Verify: Open https://<user>.github.io/<repo>/gas-webapp.json in your browser — gasWebAppUrl should contain your /exec URL, not an empty string.'
         );
       }
 
