@@ -3,8 +3,8 @@
 #
 # Repo setup (one-time):
 # 1. Settings → Pages → Build and deployment → Source: GitHub Actions.
-# 2. Settings → Secrets and variables → Actions → New repository secret:
-#    VITE_GAS_WEBAPP_URL = your Apps Script web app URL (https://script.google.com/.../exec)
+# 2. Optional: Settings → Secrets → Actions → VITE_GAS_WEBAPP_URL overrides public/gas-webapp.json.
+#    If unset, the committed public/gas-webapp.json in the repo is used.
 name: Deploy to GitHub Pages
 
 on:
@@ -36,22 +36,35 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      # Same-origin JSON so production builds get the GAS URL even if Vite env inlining fails;
-      # still populated from the same secret as VITE_GAS_WEBAPP_URL.
-      - name: Write public/gas-webapp.json
-        env:
-          VITE_GAS_WEBAPP_URL: ${{ secrets.VITE_GAS_WEBAPP_URL }}
-        run: >
-          node -e "const fs=require('fs');const u=(process.env.VITE_GAS_WEBAPP_URL||'').trim();
-          fs.writeFileSync('public/gas-webapp.json',JSON.stringify({gasWebAppUrl:u}));"
-
-      - name: Warn if Apps Script URL is missing
+      # If VITE_GAS_WEBAPP_URL secret is set, it overrides public/gas-webapp.json.
+      # If the secret is empty, the committed public/gas-webapp.json is kept (so deploys still work).
+      - name: Optionally override public/gas-webapp.json from secret
         env:
           VITE_GAS_WEBAPP_URL: ${{ secrets.VITE_GAS_WEBAPP_URL }}
         run: |
-          if [ -z "$VITE_GAS_WEBAPP_URL" ]; then
-            echo "::warning::Repository secret VITE_GAS_WEBAPP_URL is empty — waiver POST/email will be skipped until you add it (GitHub → Settings → Secrets and variables → Actions)."
-          fi
+          node -e "
+          const fs=require('fs');
+          const u=(process.env.VITE_GAS_WEBAPP_URL||'').trim();
+          const p='public/gas-webapp.json';
+          if (u.startsWith('https://script.google.com')) {
+            fs.writeFileSync(p, JSON.stringify({ gasWebAppUrl: u }));
+            console.log('gas-webapp.json written from VITE_GAS_WEBAPP_URL secret.');
+          } else {
+            console.log('Secret empty or invalid — using committed public/gas-webapp.json if present.');
+          }
+          "
+
+      - name: Warn if gas-webapp.json still has no URL
+        run: |
+          node -e "
+          const fs=require('fs');
+          const p='public/gas-webapp.json';
+          if (!fs.existsSync(p)) { console.log('::error::Missing public/gas-webapp.json'); process.exit(1); }
+          const u=(JSON.parse(fs.readFileSync(p,'utf8')).gasWebAppUrl||'').trim();
+          if (!u.startsWith('https://script.google.com')) {
+            console.log('::warning::gas-webapp.json has no valid gasWebAppUrl — set GitHub secret VITE_GAS_WEBAPP_URL or commit a valid URL in public/gas-webapp.json');
+          }
+          "
 
       - name: Build
         run: npm run build

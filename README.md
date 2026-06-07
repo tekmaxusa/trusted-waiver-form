@@ -18,7 +18,7 @@ Target repository: [tekmaxusa/saheli-waiver-form](https://github.com/tekmaxusa/s
 
 1. Push this repo to GitHub (default branch `main`).
 2. **Settings → Pages → Build and deployment:** set **Source** to **GitHub Actions**.
-3. **Settings → Secrets and variables → Actions:** add secret **`VITE_GAS_WEBAPP_URL`** (your Apps Script `/exec` URL). The workflow copies it into `public/gas-webapp.json` during the build so the live site can load the endpoint from the same origin as well as from Vite’s env.
+3. **Optional GitHub secret** — **`VITE_GAS_WEBAPP_URL`** overrides the committed `public/gas-webapp.json` during the build. If you do not set the secret, the repo’s committed `gas-webapp.json` (your default Apps Script `/exec` URL) is used so the live site still receives waivers.
 4. Push to `main` or run the workflow manually (**Actions → Deploy to GitHub Pages → Run workflow**).
 
 The live site will be at `https://tekmaxusa.github.io/saheli-waiver-form/` (paths and assets use the repo name as the base path).
