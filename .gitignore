@@ -6,3 +6,5 @@ coverage/
 *.log
 .env*
 !.env.example
+# Generated in CI from Actions secret (optional local override)
+public/gas-webapp.json

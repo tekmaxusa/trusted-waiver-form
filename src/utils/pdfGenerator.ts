@@ -1,14 +1,12 @@
 import { jsPDF } from 'jspdf';
 import { WaiverFormData } from '../types';
+import {publicAssetUrl} from './publicAsset';
 
 type LogoLoad = { data: string; format: 'PNG' | 'JPEG' } | null;
 
-/** Spa logo in `public/saheli-spa-logo.png`, then Centennial site fallback. */
+/** Spa logo from `public/saheli-spa-logo.png` (same-origin; avoids CORS on GitHub Pages). */
 async function loadPdfLogo_(): Promise<LogoLoad> {
-  const urls = [
-    '/saheli-spa-logo.png',
-    'https://sahelieyebrowcentennial.com/wp-content/uploads/2024/12/IMG_6315.jpg',
-  ];
+  const urls = [publicAssetUrl('saheli-spa-logo.png')];
   for (const url of urls) {
     try {
       const res = await fetch(url);

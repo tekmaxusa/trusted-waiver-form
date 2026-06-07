@@ -36,6 +36,23 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      # Same-origin JSON so production builds get the GAS URL even if Vite env inlining fails;
+      # still populated from the same secret as VITE_GAS_WEBAPP_URL.
+      - name: Write public/gas-webapp.json
+        env:
+          VITE_GAS_WEBAPP_URL: ${{ secrets.VITE_GAS_WEBAPP_URL }}
+        run: >
+          node -e "const fs=require('fs');const u=(process.env.VITE_GAS_WEBAPP_URL||'').trim();
+          fs.writeFileSync('public/gas-webapp.json',JSON.stringify({gasWebAppUrl:u}));"
+
+      - name: Warn if Apps Script URL is missing
+        env:
+          VITE_GAS_WEBAPP_URL: ${{ secrets.VITE_GAS_WEBAPP_URL }}
+        run: |
+          if [ -z "$VITE_GAS_WEBAPP_URL" ]; then
+            echo "::warning::Repository secret VITE_GAS_WEBAPP_URL is empty — waiver POST/email will be skipped until you add it (GitHub → Settings → Secrets and variables → Actions)."
+          fi
+
       - name: Build
         run: npm run build
         env:

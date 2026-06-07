@@ -1,6 +1,7 @@
 import { FileText, Download, ArrowLeft } from 'lucide-react';
 import { WaiverFormData } from '../types';
 import { generateWaiverPDF } from '../utils/pdfGenerator';
+import {publicAssetUrl} from '../utils/publicAsset';
 
 interface SuccessPageProps {
   onReset: () => void;
@@ -23,8 +24,8 @@ export default function SuccessPage({ onReset, submittedData }: SuccessPageProps
       <div className="flex flex-col items-center gap-4 mb-6">
         {/* Brand Logo - High Resolution Formal */}
         <div className="relative">
-          <img 
-            src="https://sahelieyebrowcentennial.com/wp-content/uploads/2024/12/IMG_6315.jpg" 
+          <img
+            src={publicAssetUrl('saheli-spa-logo.png')}
             alt="Saheli Eyebrow Threading Centennial Logo" 
             className="w-20 h-20 rounded-full object-cover border border-neutral-200 shadow-sm grayscale-[20%]" 
             referrerPolicy="no-referrer" 

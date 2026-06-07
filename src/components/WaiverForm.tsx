@@ -3,24 +3,13 @@ import { Loader2 } from 'lucide-react';
 import { WaiverFormData, WaiverSubmissionPayload } from '../types';
 import SignaturePad from './SignaturePad';
 import { generateWaiverPDF } from '../utils/pdfGenerator';
+import {resolveGasWebAppUrl} from '../utils/resolveGasWebAppUrl';
 
 interface WaiverFormProps {
   onSubmitSuccess: (data: WaiverFormData) => void;
 }
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-function getAppsScriptUrl(): string | null {
-  const env = import.meta.env.VITE_GAS_WEBAPP_URL as string | undefined;
-  if (env && String(env).trim().startsWith('https://script.google.com')) {
-    return String(env).trim();
-  }
-  const stored = localStorage.getItem('saheli_waiver_gas_url');
-  if (stored && stored.trim().startsWith('https://script.google.com')) {
-    return stored.trim();
-  }
-  return null;
-}
 
 function countPhoneDigits(value: string): number {
   return value.replace(/\D/g, '').length;
@@ -96,6 +85,10 @@ export default function WaiverForm({ onSubmitSuccess }: WaiverFormProps) {
       hour12: true,
     });
   };
+
+  useEffect(() => {
+    void resolveGasWebAppUrl();
+  }, []);
 
   useEffect(() => {
     const now = new Date();
@@ -256,7 +249,7 @@ export default function WaiverForm({ onSubmitSuccess }: WaiverFormProps) {
         pdfFilename: filename,
       };
 
-      const gasUrl = getAppsScriptUrl();
+      const gasUrl = await resolveGasWebAppUrl();
       if (gasUrl) {
         const payload = JSON.stringify(submissionPayload);
         const body = new URLSearchParams();
@@ -275,7 +268,7 @@ export default function WaiverForm({ onSubmitSuccess }: WaiverFormProps) {
         }
       } else {
         console.warn(
-          'Waiver PDF generated locally. Set VITE_GAS_WEBAPP_URL or paste the Apps Script URL in localStorage key saheli_waiver_gas_url to enable email/Sheets.'
+          'Waiver PDF generated locally. Set GitHub Actions secret VITE_GAS_WEBAPP_URL, add VITE_GAS_WEBAPP_URL to .env.local, copy public/gas-webapp.example.json to public/gas-webapp.json, or set localStorage key saheli_waiver_gas_url to your Apps Script /exec URL.'
         );
       }
 
@@ -408,14 +401,33 @@ export default function WaiverForm({ onSubmitSuccess }: WaiverFormProps) {
             <label htmlFor="dateOfBirth" className="block text-xs font-medium text-neutral-600">
               Date of birth <span className="text-neutral-400 font-normal">(optional)</span>
             </label>
-            <input
-              type="date"
-              id="dateOfBirth"
-              name="dateOfBirth"
-              value={formData.dateOfBirth}
-              onChange={(e) => handleTextChange('dateOfBirth', e.target.value)}
-              className="w-full max-w-xs px-3.5 py-2.5 border border-neutral-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-neutral-100 focus:border-neutral-900"
-            />
+            <div className="flex flex-col gap-2 max-w-lg">
+              <input
+                type="date"
+                id="dateOfBirth"
+                name="dateOfBirth"
+                value={
+                  /^\d{4}-\d{2}-\d{2}$/.test(formData.dateOfBirth.trim())
+                    ? formData.dateOfBirth.trim().slice(0, 10)
+                    : ''
+                }
+                onChange={(e) => handleTextChange('dateOfBirth', e.target.value)}
+                className="w-full max-w-xs px-3.5 py-2.5 border border-neutral-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-neutral-100 focus:border-neutral-900"
+              />
+              <input
+                type="text"
+                id="dateOfBirthText"
+                name="dateOfBirthText"
+                autoComplete="bday"
+                value={formData.dateOfBirth}
+                onChange={(e) => handleTextChange('dateOfBirth', e.target.value)}
+                className="w-full px-3.5 py-2.5 border border-neutral-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-neutral-100 focus:border-neutral-900"
+                placeholder="Or type your date (e.g. Jan 15, 1990, 03/15/1990, or any format you prefer)"
+              />
+            </div>
+            <p className="text-xs text-neutral-400">
+              Use the calendar to pick year/month/day, or type freely in the second field.
+            </p>
           </div>
 
           <div className="space-y-1.5 sm:col-span-2">

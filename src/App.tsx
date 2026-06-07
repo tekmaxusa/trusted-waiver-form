@@ -3,6 +3,7 @@ import { Check } from 'lucide-react';
 import { WaiverFormData } from './types';
 import WaiverForm from './components/WaiverForm';
 import SuccessPage from './components/SuccessPage';
+import {publicAssetUrl} from './utils/publicAsset';
 
 export default function App() {
   const [submittedData, setSubmittedData] = useState<WaiverFormData | null>(null);
@@ -23,8 +24,8 @@ export default function App() {
         <div className="max-w-4xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3">
             {/* Elegant Official Logo */}
-            <img 
-              src="https://sahelieyebrowcentennial.com/wp-content/uploads/2024/12/IMG_6315.jpg" 
+            <img
+              src={publicAssetUrl('saheli-spa-logo.png')}
               alt="Saheli Eyebrow Threading Logo" 
               className="w-9 h-9 rounded-full object-cover border border-neutral-200/80 grayscale-[30%] shadow-sm" 
               referrerPolicy="no-referrer" 
