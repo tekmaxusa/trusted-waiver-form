@@ -486,7 +486,7 @@ function saheliSendTestEmail() {
 function saheliWebhookSelfTest() {
   /** Same URL as Web App deployment (update if you redeploy). */
   var url =
-    'https://script.google.com/macros/s/AKfycby35latS4O5kK4Wuz07gK45u5P1Ks-_F0AAJbBKwpeKdq07HGi5yB8Knsk7x8aDoCjg/exec';
+    'https://script.google.com/macros/s/AKfycbyqBl1-IxpJSOzzHEhwODgjiKleYsgtHQ-QRIyYA8Jye6Ogdjhx9C5Acy2nSgRGRU0U/exec';
   if (!url || url.indexOf('script.google.com') === -1) {
     throw new Error('Set var url in saheliWebhookSelfTest to your /exec URL.');
   }
