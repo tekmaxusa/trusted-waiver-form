@@ -209,6 +209,84 @@ function applyWaiverGmailLabel_(waiverRef) {
   return false;
 }
 
+var PENDING_LABEL_PROP = 'PENDING_WAIVER_LABEL_REFS';
+
+/**
+ * Queues a waiver ref for background labeling and ensures a one-time trigger will run soon.
+ * Keeps doPost fast: email is already sent, labeling (with its Gmail-index retries) happens later.
+ */
+function scheduleWaiverLabeling_(waiverRef) {
+  var token = String(waiverRef || '').replace(/[^a-zA-Z0-9]/g, '');
+  if (!token) {
+    return;
+  }
+  var props = PropertiesService.getScriptProperties();
+  var queued = props.getProperty(PENDING_LABEL_PROP);
+  var refs = [];
+  if (queued) {
+    try {
+      refs = JSON.parse(queued) || [];
+    } catch (parseErr) {
+      refs = [];
+    }
+  }
+  refs.push(token);
+  // Cap the queue so a backlog cannot grow without bound.
+  if (refs.length > 50) {
+    refs = refs.slice(refs.length - 50);
+  }
+  props.setProperty(PENDING_LABEL_PROP, JSON.stringify(refs));
+
+  var hasTrigger = false;
+  var triggers = ScriptApp.getProjectTriggers();
+  for (var i = 0; i < triggers.length; i++) {
+    if (triggers[i].getHandlerFunction() === 'processPendingWaiverLabels_') {
+      hasTrigger = true;
+      break;
+    }
+  }
+  if (!hasTrigger) {
+    ScriptApp.newTrigger('processPendingWaiverLabels_').timeBased().after(20 * 1000).create();
+  }
+}
+
+/**
+ * Background job (time-based trigger): labels every queued waiver thread, then deletes its own trigger.
+ */
+function processPendingWaiverLabels_() {
+  var triggers = ScriptApp.getProjectTriggers();
+  for (var i = 0; i < triggers.length; i++) {
+    if (triggers[i].getHandlerFunction() === 'processPendingWaiverLabels_') {
+      try {
+        ScriptApp.deleteTrigger(triggers[i]);
+      } catch (delErr) {
+        Logger.log('deleteTrigger: ' + delErr);
+      }
+    }
+  }
+
+  var props = PropertiesService.getScriptProperties();
+  var queued = props.getProperty(PENDING_LABEL_PROP);
+  if (!queued) {
+    return;
+  }
+  props.deleteProperty(PENDING_LABEL_PROP);
+
+  var refs = [];
+  try {
+    refs = JSON.parse(queued) || [];
+  } catch (parseErr) {
+    refs = [];
+  }
+  for (var r = 0; r < refs.length; r++) {
+    try {
+      applyWaiverGmailLabel_(refs[r]);
+    } catch (labelErr) {
+      Logger.log('processPendingWaiverLabels_ ref=' + refs[r] + ' failed: ' + labelErr);
+    }
+  }
+}
+
 /** Sheet tab to log rows to. */
 function getTargetSheet_() {
   if (SPREADSHEET_ID) {
@@ -486,12 +564,13 @@ function doPost(e) {
       }
     }
 
-    var labeled = false;
+    // Gmail labeling runs in the background (Utilities.sleep retries take ~16s and would
+    // keep the form spinner running because the no-cors POST waits for this response).
     if (mailSent) {
       try {
-        labeled = applyWaiverGmailLabel_(waiverRef);
-      } catch (labelErr) {
-        Logger.log('applyWaiverGmailLabel_ failed (non-fatal): ' + labelErr + ' ' + (labelErr.stack || ''));
+        scheduleWaiverLabeling_(waiverRef);
+      } catch (schedErr) {
+        Logger.log('scheduleWaiverLabeling_ failed (non-fatal): ' + schedErr);
       }
     }
 
@@ -499,7 +578,7 @@ function doPost(e) {
       JSON.stringify({
         status: 'success',
         message: 'Logged and emailed.',
-        labeled: labeled,
+        labeledAsync: mailSent,
         waiverRef: waiverRef,
       })
     ).setMimeType(ContentService.MimeType.JSON);
@@ -528,7 +607,7 @@ function saheliSendTestEmail() {
 function saheliWebhookSelfTest() {
   /** Same URL as Web App deployment (update if you redeploy). */
   var url =
-    'https://script.google.com/macros/s/AKfycbw4LnyU-W4vVsvQZeT28qF30x31j95B4KZYUtWCqraDGBwjEhmFMg-Y04nOzB7VgyVS/exec';
+    'https://script.google.com/macros/s/AKfycbwaN_gkYkvQYqu3WVikm0RD83JpGQsvuv_RySjm105gLeaEEo-lDK1XB4Q8ZJaL8Ybs/exec';
   if (!url || url.indexOf('script.google.com') === -1) {
     throw new Error('Set var url in saheliWebhookSelfTest to your /exec URL.');
   }
