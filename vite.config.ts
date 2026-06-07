@@ -1,7 +1,30 @@
 import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
 import path from 'path';
-import {defineConfig} from 'vite';
+import { fileURLToPath } from 'node:url';
+import { defineConfig } from 'vite';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
+/** TrustedWaiver-style paths; each folder has its own index.html for GitHub Pages. */
+const WAIVER_HTML_PATHS = [
+  'sahelieyebrow/waiver-from-centennial-location',
+  'sahelieyebrow/waiver-from-aurora-location',
+  'sahelieyebrow/waiver-from-thornton-location',
+  'sahelieyebrow/waiver-from-denver-location',
+  'sahelieyebrow/waiver-from-parker-location',
+] as const;
+
+function buildRollupInput(): Record<string, string> {
+  const input: Record<string, string> = {
+    main: path.resolve(__dirname, 'index.html'),
+  };
+  for (const rel of WAIVER_HTML_PATHS) {
+    const key = rel.replace(/\//g, '-');
+    input[key] = path.resolve(__dirname, rel, 'index.html');
+  }
+  return input;
+}
 
 export default defineConfig(() => {
   const base =
@@ -14,11 +37,13 @@ export default defineConfig(() => {
         '@': path.resolve(__dirname, '.'),
       },
     },
+    build: {
+      rollupOptions: {
+        input: buildRollupInput(),
+      },
+    },
     server: {
-      // HMR is disabled in AI Studio via DISABLE_HMR env var.
-      // Do not modify — file watching is disabled to prevent flickering during agent edits.
       hmr: process.env.DISABLE_HMR !== 'true',
-      // Disable file watching when DISABLE_HMR is true to save CPU during agent edits.
       watch: process.env.DISABLE_HMR === 'true' ? null : {},
     },
   };

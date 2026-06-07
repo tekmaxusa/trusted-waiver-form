@@ -1,6 +1,42 @@
 import { jsPDF } from 'jspdf';
 import { WaiverFormData } from '../types';
-import {publicAssetUrl} from './publicAsset';
+import type { WaiverLocationConfig } from '../merchants/types';
+import { publicAssetUrl } from './publicAsset';
+
+/** PDF header/footer copy for a salon location (shared by form + success download). */
+export interface WaiverPdfBranding {
+  pdfSubtitleLine: string;
+  addressPhoneLine: string;
+  footerLine: string;
+  /** Safe fragment for filename, e.g. Centennial-Location */
+  filenameLocationPart: string;
+  /** Human-readable location for the PDF body */
+  locationDisplayName: string;
+}
+
+export function pdfBrandingForLocation(loc: WaiverLocationConfig): WaiverPdfBranding {
+  const safePart =
+    loc.locationDisplayName
+      .replace(/[^\w\s-]/g, '')
+      .replace(/\s+/g, '-')
+      .replace(/-+/g, '-') || 'Location';
+  return {
+    pdfSubtitleLine: `CLIENT INTAKE & LIABILITY WAIVER — ${loc.locationDisplayName.toUpperCase()}`,
+    addressPhoneLine: `${loc.addressLine}  |  ${loc.phone}`,
+    footerLine: `Electronic intake record — ${loc.locationDisplayName}. Filename uses the client name for filing.`,
+    filenameLocationPart: safePart,
+    locationDisplayName: loc.locationDisplayName,
+  };
+}
+
+const DEFAULT_BRANDING: WaiverPdfBranding = {
+  pdfSubtitleLine: 'CLIENT INTAKE & LIABILITY WAIVER (CENTENNIAL)',
+  addressPhoneLine: '10909 E Arapahoe Pl, Centennial, CO  |  (720) 630-8549',
+  footerLine:
+    'Electronic intake record — Centennial location. Filename uses the client name for filing.',
+  filenameLocationPart: 'Centennial-Location',
+  locationDisplayName: 'Centennial Location',
+};
 
 type LogoLoad = { data: string; format: 'PNG' | 'JPEG' } | null;
 
@@ -36,8 +72,10 @@ function safePdfFilenamePart(name: string): string {
 
 export async function generateWaiverPDF(
   data: WaiverFormData,
-  submittedAtISO?: string
+  submittedAtISO?: string,
+  branding?: WaiverPdfBranding
 ): Promise<{ doc: jsPDF; filename: string }> {
+  const b = branding ?? DEFAULT_BRANDING;
   const logo = await loadPdfLogo_();
 
   const doc = new jsPDF({
@@ -100,13 +138,13 @@ export async function generateWaiverPDF(
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(10.5);
     doc.setTextColor(178, 138, 71);
-    doc.text('CLIENT INTAKE & LIABILITY WAIVER (CENTENNIAL)', textX, textY, { maxWidth: textRight - textX });
+    doc.text(b.pdfSubtitleLine, textX, textY, { maxWidth: textRight - textX });
     textY += 6;
 
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(8.5);
     doc.setTextColor(120, 113, 108);
-    doc.text('10909 E Arapahoe Pl, Centennial, CO  |  (720) 630-8549', textX, textY, {
+    doc.text(b.addressPhoneLine, textX, textY, {
       maxWidth: textRight - textX,
     });
     textY += 5;
@@ -146,6 +184,7 @@ export async function generateWaiverPDF(
     ty += lines.length * lh + 3;
   };
 
+  row('Location:', b.locationDisplayName);
   row('Full name:', data.clientName);
   row('Phone:', data.phoneNumber);
   row('Email:', data.email);
@@ -373,13 +412,9 @@ export async function generateWaiverPDF(
   doc.setFont('helvetica', 'italic');
   doc.setFontSize(7.5);
   doc.setTextColor(168, 162, 158);
-  doc.text(
-    'Electronic intake record — Centennial location. Filename uses the client name for filing.',
-    marginX,
-    pageHeight - 12
-  );
+  doc.text(b.footerLine, marginX, pageHeight - 12);
 
-  const filename = `Saheli-Waiver-Centennial-${safePdfFilenamePart(data.clientName)}.pdf`;
+  const filename = `Saheli-Waiver-${b.filenameLocationPart}-${safePdfFilenamePart(data.clientName)}.pdf`;
 
   return { doc, filename };
 }

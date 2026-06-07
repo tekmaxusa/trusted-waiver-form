@@ -169,7 +169,7 @@ export default function SignaturePad({
             aria-label="Clear signature"
           >
             <Eraser size={12} aria-hidden />
-            Clear signature
+            Clear Signature
           </button>
         </div>
       </div>
@@ -203,7 +203,7 @@ export default function SignaturePad({
 
       {committedSignature ? (
         <p className="text-[10px] text-emerald-700 font-medium" role="status">
-          Signature saved. Use Clear signature to sign again.
+          Signature saved. Use Clear Signature to sign again.
         </p>
       ) : null}
 

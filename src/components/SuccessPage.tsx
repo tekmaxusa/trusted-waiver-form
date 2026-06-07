@@ -1,18 +1,24 @@
 import { FileText, Download, ArrowLeft } from 'lucide-react';
 import { WaiverFormData } from '../types';
-import { generateWaiverPDF } from '../utils/pdfGenerator';
-import {publicAssetUrl} from '../utils/publicAsset';
+import { generateWaiverPDF, pdfBrandingForLocation } from '../utils/pdfGenerator';
+import { publicAssetUrl } from '../utils/publicAsset';
+import type { WaiverLocationConfig } from '../merchants/types';
 
 interface SuccessPageProps {
   onReset: () => void;
   submittedData: WaiverFormData;
+  location: WaiverLocationConfig;
 }
 
-export default function SuccessPage({ onReset, submittedData }: SuccessPageProps) {
-  
+export default function SuccessPage({ onReset, submittedData, location }: SuccessPageProps) {
   const handleDownloadPDF = async () => {
     try {
-      const { doc, filename } = await generateWaiverPDF(submittedData, submittedData.submittedAtISO);
+      const branding = pdfBrandingForLocation(location);
+      const { doc, filename } = await generateWaiverPDF(
+        submittedData,
+        submittedData.submittedAtISO,
+        branding
+      );
       doc.save(filename);
     } catch (err) {
       console.error('Failed to generate/download PDF on success page:', err);
@@ -22,13 +28,12 @@ export default function SuccessPage({ onReset, submittedData }: SuccessPageProps
   return (
     <div className="max-w-md mx-auto py-12 px-4 text-center">
       <div className="flex flex-col items-center gap-4 mb-6">
-        {/* Brand Logo - High Resolution Formal */}
         <div className="relative">
           <img
             src={publicAssetUrl('saheli-spa-logo.png')}
-            alt="Saheli Eyebrow Threading Centennial Logo" 
-            className="w-20 h-20 rounded-full object-cover border border-neutral-200 shadow-sm grayscale-[20%]" 
-            referrerPolicy="no-referrer" 
+            alt="Saheli Eyebrow Threading"
+            className="w-20 h-20 rounded-full object-cover border border-neutral-200 shadow-sm grayscale-[20%]"
+            referrerPolicy="no-referrer"
           />
         </div>
       </div>
@@ -36,12 +41,15 @@ export default function SuccessPage({ onReset, submittedData }: SuccessPageProps
       <h1 className="text-xl sm:text-2xl font-sans text-neutral-900 tracking-tight font-bold mb-2">
         Submission Complete
       </h1>
-      
-      <p className="text-xs sm:text-sm text-neutral-500 mb-8 max-w-sm mx-auto leading-relaxed font-light">
-        Thank you. Your electronic liability release waiver is formally recorded for your upcoming session today.
+
+      <p className="text-xs sm:text-sm text-neutral-500 mb-2 max-w-sm mx-auto leading-relaxed font-light">
+        Thank you. Your electronic liability release waiver is recorded for {location.locationDisplayName}.
       </p>
 
-      {/* Copy of the PDF box */}
+      <p className="text-xs sm:text-sm text-neutral-500 mb-8 max-w-sm mx-auto leading-relaxed font-light">
+        You can download a PDF copy for your records below.
+      </p>
+
       <div className="bg-white border border-neutral-200/60 rounded-xl p-5 mb-8 text-left max-w-sm mx-auto shadow-sm">
         <div className="flex items-start gap-3.5">
           <div className="p-2 border border-neutral-200 text-neutral-700 rounded-lg mt-0.5">
@@ -50,7 +58,7 @@ export default function SuccessPage({ onReset, submittedData }: SuccessPageProps
           <div className="flex-1">
             <h4 className="font-semibold text-stone-800 text-xs uppercase tracking-wide">Client Record File</h4>
             <p className="text-[11px] text-stone-500 mt-1 mb-3.5 leading-relaxed font-light">
-              Your registered PDF is validated. You can download an offline duplicate for your personal records here.
+              Your registered PDF is validated. Download an offline duplicate for your personal records.
             </p>
             <button
               type="button"

@@ -30,11 +30,22 @@ export interface MedicalQuestions {
   takingRetinolAccutane: boolean | null;
 }
 
+/** Sent to Google Apps Script with each waiver POST (server can route email / Sheets). */
+export interface WaiverSubmissionMeta {
+  merchantSlug: string;
+  waiverPageSlug: string;
+  locationShortName: string;
+  locationAddress: string;
+  locationPhone: string;
+  routePath: string;
+}
+
 /** Payload sent to Google Apps Script (includes PDF + metadata). */
 export interface WaiverSubmissionPayload extends WaiverFormData {
   pdfBase64: string;
   pdfFilename: string;
   submittedAtISO: string;
+  waiverMeta: WaiverSubmissionMeta;
 }
 
 export interface WaiverFormData {

@@ -1,12 +1,14 @@
 import { useState, FormEvent, useEffect } from 'react';
 import { Loader2 } from 'lucide-react';
-import { WaiverFormData, WaiverSubmissionPayload } from '../types';
+import { WaiverFormData, WaiverSubmissionMeta, WaiverSubmissionPayload } from '../types';
 import SignaturePad from './SignaturePad';
-import { generateWaiverPDF } from '../utils/pdfGenerator';
-import {resolveGasWebAppUrl} from '../utils/resolveGasWebAppUrl';
+import { generateWaiverPDF, pdfBrandingForLocation } from '../utils/pdfGenerator';
+import { resolveGasWebAppUrl } from '../utils/resolveGasWebAppUrl';
+import type { WaiverLocationConfig } from '../merchants/types';
 
 interface WaiverFormProps {
   onSubmitSuccess: (data: WaiverFormData) => void;
+  location: WaiverLocationConfig;
 }
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -66,7 +68,7 @@ type TextField =
   | 'emergencyContactName'
   | 'emergencyContactPhone';
 
-export default function WaiverForm({ onSubmitSuccess }: WaiverFormProps) {
+export default function WaiverForm({ onSubmitSuccess, location }: WaiverFormProps) {
   const [formData, setFormData] = useState<WaiverFormData>(getInitialFormData());
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -238,15 +240,26 @@ export default function WaiverForm({ onSubmitSuccess }: WaiverFormProps) {
     const submittedAtISO = new Date().toISOString();
 
     try {
-      const { doc, filename } = await generateWaiverPDF(formData, submittedAtISO);
+      const branding = pdfBrandingForLocation(location);
+      const { doc, filename } = await generateWaiverPDF(formData, submittedAtISO, branding);
       const pdfBytes = doc.output('datauristring');
       const base64PdfPart = pdfBytes.split('base64,')[1];
+
+      const waiverMeta: WaiverSubmissionMeta = {
+        merchantSlug: location.merchantSlug,
+        waiverPageSlug: location.waiverPageSlug,
+        locationShortName: location.emailSubjectLocation,
+        locationAddress: location.addressLine,
+        locationPhone: location.phone,
+        routePath: `${location.merchantSlug}/${location.waiverPageSlug}`,
+      };
 
       const submissionPayload: WaiverSubmissionPayload = {
         ...formData,
         submittedAtISO,
         pdfBase64: base64PdfPart,
         pdfFilename: filename,
+        waiverMeta,
       };
 
       const gasUrl = await resolveGasWebAppUrl();

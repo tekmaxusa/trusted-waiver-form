@@ -1,6 +1,6 @@
-# Saheli Centennial — Client Waiver
+# Saheli Eyebrow Threading — Multi-location waivers
 
-Vite + React waiver form. Waiver PDFs are posted to [Google Apps Script](https://developers.google.com/apps-script) for email and optional Sheets logging (see `google-apps-script/Code.gs`).
+Vite + React waiver forms for **five salon locations** (TrustedWaiver-style URLs). PDFs post to [Google Apps Script](https://developers.google.com/apps-script) for email and Sheets (see `google-apps-script/Code.gs`). Design and routing are described in [ARCHITECTURE.md](./ARCHITECTURE.md).
 
 ## Local development
 
@@ -11,6 +11,11 @@ cp .env.example .env.local
 # Or copy public/gas-webapp.example.json to public/gas-webapp.json and set gasWebAppUrl.
 npm run dev
 ```
+
+Open:
+
+- `http://localhost:3000/` — links to each waiver  
+- `http://localhost:3000/sahelieyebrow/waiver-from-centennial-location/` (and Aurora, Thornton, Denver, Parker — same path pattern as TrustedWaiver)
 
 ## Deploy to GitHub Pages
 

@@ -16,7 +16,7 @@
  *
  * SPREADSHEET_ID: optional. Leave '' if this project was created from the Sheet (Extensions → Apps Script).
  */
-var NOTIFICATION_EMAIL = 'yu.jeremiah612@gmail.com';
+var NOTIFICATION_EMAIL = 'sahelieyebrowco@gmail.com';
 var SPREADSHEET_ID = '';
 /**
  * Gmail label for each waiver notification. Name appears in your Labels list once a message is tagged.
@@ -53,6 +53,15 @@ function emergencyLine_(postData) {
   if (!name && !phone) return '';
   if (name && phone) return name + ' — ' + phone;
   return name || phone;
+}
+
+function locationLineFromMeta_(postData) {
+  var m = postData.waiverMeta || {};
+  if (!m.locationShortName && !m.locationAddress) return '—';
+  var s = m.locationShortName || '';
+  if (m.locationAddress) s = (s ? s + ' — ' : '') + m.locationAddress;
+  if (m.locationPhone) s += (s ? ' • ' : '') + m.locationPhone;
+  return s || '—';
 }
 
 function humanServices_(svc) {
@@ -273,14 +282,20 @@ function buildWaiverSummaryHtml_(postData, servicesLine, skinLine, mq, signature
     extraRows += row('Emergency contact', ec);
   }
 
+  var meta = postData.waiverMeta || {};
+  var locShort = meta.locationShortName || 'Saheli salon';
+
   return (
     '<div style="font-family:Georgia,Times,serif;max-width:560px;margin:0 auto;padding:24px;color:#222">' +
     '<div style="text-align:center;margin-bottom:20px">' +
     '<p style="margin:0;font-size:20px;font-weight:600;letter-spacing:0.02em">Saheli Eyebrow Threading</p>' +
-    '<p style="margin:4px 0 0;font-size:12px;color:#666">Centennial — Client waiver</p></div>' +
+    '<p style="margin:4px 0 0;font-size:12px;color:#666">' +
+    escapeHtml_(locShort) +
+    ' — Client waiver</p></div>' +
     '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse">' +
     row('Client name', postData.clientName || '—') +
     row('Phone number', postData.phoneNumber || '—') +
+    row('Salon / location', locationLineFromMeta_(postData)) +
     extraRows +
     row('Treatment type (check all that apply)', servicesLine) +
     row('Skin conditions (check any that apply)', skinLine) +
@@ -293,7 +308,7 @@ function buildWaiverSummaryHtml_(postData, servicesLine, skinLine, mq, signature
     sigBlock +
     row('Date / time', postData.signatureDate || '—') +
     '</table>' +
-    '<p style="margin-top:24px;font-size:11px;color:#999;text-align:center">Sent from Saheli Centennial waiver form</p>' +
+    '<p style="margin-top:24px;font-size:11px;color:#999;text-align:center">Sent from Saheli Eyebrow waiver portal</p>' +
     '</div>'
   );
 }
@@ -330,6 +345,7 @@ function doPost(e) {
       if (sheet.getLastRow() === 0) {
         sheet.appendRow([
           'Timestamp',
+          'Location',
           'Full Name',
           'Phone',
           'Email',
@@ -340,8 +356,11 @@ function doPost(e) {
         ]);
       }
 
+      var locCell = postData.waiverMeta && postData.waiverMeta.locationShortName ? postData.waiverMeta.locationShortName : '';
+
       sheet.appendRow([
         timestamp,
+        locCell,
         clientName,
         phoneNumber,
         email,
@@ -362,7 +381,9 @@ function doPost(e) {
     var mq = postData.medicalQuestions || {};
 
     var waiverRef = Utilities.getUuid().replace(/-/g, '').substring(0, 14);
-    var subject = 'New Waiver Submission - Centennial - ' + clientName + ' (ref ' + waiverRef + ')';
+    var meta = postData.waiverMeta || {};
+    var locForSubject = meta.locationShortName || 'Unknown Location';
+    var subject = 'New Waiver Submission - ' + locForSubject + ' - ' + clientName + ' (ref ' + waiverRef + ')';
 
     var pdfBlob = null;
     if (postData.pdfBase64) {
@@ -381,7 +402,9 @@ function doPost(e) {
     var htmlBody = buildWaiverSummaryHtml_(postData, servicesLine, skinLine, mq, '');
 
     var plainBody =
-      'New Centennial waiver\nClient: ' +
+      'New waiver (' +
+      locForSubject +
+      ')\nClient: ' +
       clientName +
       '\nPhone: ' +
       phoneNumber +
@@ -406,7 +429,7 @@ function doPost(e) {
       subject: subject,
       body: plainBody,
       htmlBody: htmlBody,
-      name: 'Saheli Centennial Waivers',
+      name: 'Saheli Eyebrow Waivers',
     };
     if (attachments.length) {
       mailOpts.attachments = attachments;
@@ -420,7 +443,7 @@ function doPost(e) {
     } catch (mailErr) {
       Logger.log('MailApp.sendEmail failed: ' + mailErr + ' — trying GmailApp');
       try {
-        var gOpts = { htmlBody: htmlBody, name: 'Saheli Centennial Waivers' };
+        var gOpts = { htmlBody: htmlBody, name: 'Saheli Eyebrow Waivers' };
         if (attachments.length) {
           gOpts.attachments = attachments;
         }
@@ -435,7 +458,7 @@ function doPost(e) {
             to: NOTIFICATION_EMAIL,
             subject: sentSubject,
             body: plainBody + '\n\nMail error: ' + String(mailErr) + ' | ' + String(gErr),
-            name: 'Saheli Centennial Waivers',
+            name: 'Saheli Eyebrow Waivers',
           });
           mailSent = true;
         } catch (mailErr2) {
@@ -476,7 +499,7 @@ function saheliSendTestEmail() {
     to: NOTIFICATION_EMAIL,
     subject: 'Saheli waiver — TEST',
     body: 'If you received this, MailApp is working. Also run saheliGmailLabelSmokeTest for Gmail/labels.',
-    name: 'Saheli Centennial Waivers',
+    name: 'Saheli Eyebrow Waivers',
   });
 }
 
