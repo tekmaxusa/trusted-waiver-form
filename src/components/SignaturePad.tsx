@@ -147,7 +147,7 @@ export default function SignaturePad({
           className="text-[10px] font-bold text-neutral-500 uppercase tracking-wider"
           htmlFor="waiver-signature-pad"
         >
-          Client signature <span className="text-red-500">*</span>
+          Client Signature <span className="text-red-500">*</span>
         </label>
         <div className="flex flex-wrap items-center gap-2">
           <button

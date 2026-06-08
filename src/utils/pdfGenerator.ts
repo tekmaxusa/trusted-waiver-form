@@ -166,7 +166,7 @@ export async function generateWaiverPDF(
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(11);
   doc.setTextColor(15, 23, 42);
-  doc.text('1. CLIENT INFORMATION', marginX, currentY);
+  doc.text('1. CLIENT', marginX, currentY);
   currentY += 5;
 
   const labelX = marginX + 6;
@@ -188,33 +188,41 @@ export async function generateWaiverPDF(
   };
 
   row('Location:', b.locationDisplayName);
-  row('Full name:', data.clientName);
+  row('Client name:', data.clientName);
   row('Phone:', data.phoneNumber);
-  row('Email:', data.email);
-  row('DOB:', data.dateOfBirth);
+  if ((data.email || '').trim()) {
+    row('Email:', data.email);
+  }
+  if ((data.dateOfBirth || '').trim()) {
+    row('DOB:', data.dateOfBirth);
+  }
 
   currentY = ty;
 
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(8.5);
-  doc.setTextColor(87, 80, 75);
-  doc.text('Address:', marginX + 6, currentY);
-  doc.setFont('helvetica', 'normal');
-  doc.setTextColor(28, 25, 23);
-  const addrLines = doc.splitTextToSize(data.address || '—', pageWidth - 2 * marginX - 28);
-  doc.text(addrLines, marginX + 28, currentY);
-  currentY += addrLines.length * lh + 4;
+  if ((data.address || '').trim()) {
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(8.5);
+    doc.setTextColor(87, 80, 75);
+    doc.text('Address:', marginX + 6, currentY);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(28, 25, 23);
+    const addrLines = doc.splitTextToSize(data.address.trim(), pageWidth - 2 * marginX - 28);
+    doc.text(addrLines, marginX + 28, currentY);
+    currentY += addrLines.length * lh + 4;
+  }
 
-  doc.setFont('helvetica', 'bold');
-  doc.setTextColor(87, 80, 75);
-  doc.text('Emergency contact:', marginX + 6, currentY);
-  doc.setFont('helvetica', 'normal');
-  doc.setTextColor(28, 25, 23);
-  const ec =
-    [data.emergencyContactName, data.emergencyContactPhone].filter(Boolean).join('  •  ') || '—';
-  const ecLines = doc.splitTextToSize(ec, pageWidth - 2 * marginX - 42);
-  doc.text(ecLines, marginX + 42, currentY);
-  currentY += ecLines.length * lh + 8;
+  const ec = [data.emergencyContactName, data.emergencyContactPhone].filter(Boolean).join('  •  ') || '';
+  if (ec.trim()) {
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(8.5);
+    doc.setTextColor(87, 80, 75);
+    doc.text('Emergency contact:', marginX + 6, currentY);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(28, 25, 23);
+    const ecLines = doc.splitTextToSize(ec, pageWidth - 2 * marginX - 42);
+    doc.text(ecLines, marginX + 42, currentY);
+    currentY += ecLines.length * lh + 8;
+  }
 
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(11);
@@ -234,7 +242,7 @@ export async function generateWaiverPDF(
   if (data.services.lipBlush) selectedServices.push('Lip Blush');
   if (data.services.lashEnhancement) selectedServices.push('Lash Enhancement');
   if (data.services.others) {
-    selectedServices.push(`Others: ${data.services.othersDetail || 'Yes'}`);
+    selectedServices.push(data.services.othersDetail?.trim() ? `Others: ${data.services.othersDetail}` : 'Others');
   }
   if (selectedServices.length === 0) selectedServices.push('None selected');
 
@@ -269,7 +277,7 @@ export async function generateWaiverPDF(
   if (data.skinConditions.sensitiveSkin) activeSkin.push('Sensitive Skin');
   if (data.skinConditions.none) activeSkin.push('None');
   if (data.skinConditions.others) {
-    activeSkin.push(`Others: ${data.skinConditions.othersDetail || 'Yes'}`);
+    activeSkin.push(data.skinConditions.othersDetail?.trim() ? `Others: ${data.skinConditions.othersDetail}` : 'Others');
   }
   if (activeSkin.length === 0) activeSkin.push('None specified');
 
@@ -320,7 +328,7 @@ export async function generateWaiverPDF(
   currentY += 5;
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(87, 80, 75);
-  const q2 = 'Currently taking Retinol, Accutane, or Hydroquinone?';
+  const q2 = 'Currently taking any Retinol, Accutane, Hydroquinone?';
   doc.text(q2, marginX + 5, currentY);
   doc.setFont('helvetica', 'bold');
   if (data.medicalQuestions.takingRetinolAccutane === true) {

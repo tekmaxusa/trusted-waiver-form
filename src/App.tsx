@@ -58,36 +58,12 @@ export default function App({ location }: AppProps) {
           <SuccessPage submittedData={submittedData} onReset={handleReset} location={location} />
         ) : (
           <div className="space-y-3">
-            <div className="bg-white rounded-lg p-3 sm:p-4 border border-neutral-200/60 shadow-sm space-y-2.5">
-              <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-3">
-                <div className="space-y-1">
-                  <span className="text-[9px] uppercase font-bold tracking-widest text-neutral-400 block">
-                    Customer Safety & Consent
-                  </span>
-                  <h1 className="text-lg sm:text-xl font-sans text-neutral-900 tracking-tight font-semibold leading-tight">
-                    Client Waiver Form — {location.locationDisplayName}
-                  </h1>
-                  <p className="text-xs text-neutral-500 leading-snug max-w-xl font-normal">
-                    {location.formIntroLine}
-                  </p>
-                </div>
-                <div className="flex flex-col items-start gap-0.5 p-2 bg-neutral-50 border border-neutral-100 rounded-lg text-[11px] text-neutral-600 min-w-[190px]">
-                  <span className="font-bold text-neutral-800 uppercase tracking-wider text-[9px]">Salon</span>
-                  <span className="text-neutral-500">📍 {location.addressLine}</span>
-                  <span className="text-neutral-500">📞 {location.phone}</span>
-                </div>
-              </div>
-              <div className="pt-2 border-t border-neutral-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 text-[10px] text-neutral-400">
-                <div className="flex items-center gap-1.5 font-medium text-neutral-500">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                  <span>Secure connection active</span>
-                </div>
-                <span>
-                  Required fields (<span className="text-red-500">*</span>)
-                </span>
-              </div>
-            </div>
-
+            <h1 className="text-lg sm:text-xl font-semibold text-neutral-900 tracking-tight">
+              Waiver Form for {location.locationDisplayName}
+            </h1>
+            <p className="text-xs text-neutral-500">
+              {location.addressLine} · {location.phone}
+            </p>
             <WaiverForm onSubmitSuccess={handleSubmissionSuccess} location={location} />
           </div>
         )}
