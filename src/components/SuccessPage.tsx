@@ -1,30 +1,13 @@
-import { FileText, Download, ArrowLeft } from 'lucide-react';
-import { WaiverFormData } from '../types';
-import { generateWaiverPDF, pdfBrandingForLocation } from '../utils/pdfGenerator';
+import { ArrowLeft } from 'lucide-react';
 import { publicAssetUrl } from '../utils/publicAsset';
 import type { WaiverLocationConfig } from '../merchants/types';
 
 interface SuccessPageProps {
   onReset: () => void;
-  submittedData: WaiverFormData;
   location: WaiverLocationConfig;
 }
 
-export default function SuccessPage({ onReset, submittedData, location }: SuccessPageProps) {
-  const handleDownloadPDF = async () => {
-    try {
-      const branding = pdfBrandingForLocation(location);
-      const { doc, filename } = await generateWaiverPDF(
-        submittedData,
-        submittedData.submittedAtISO,
-        branding
-      );
-      doc.save(filename);
-    } catch (err) {
-      console.error('Failed to generate/download PDF on success page:', err);
-    }
-  };
-
+export default function SuccessPage({ onReset, location }: SuccessPageProps) {
   return (
     <div className="max-w-md mx-auto py-12 px-4 text-center">
       <div className="flex flex-col items-center gap-4 mb-6">
@@ -38,40 +21,13 @@ export default function SuccessPage({ onReset, submittedData, location }: Succes
         </div>
       </div>
 
-      <h1 className="text-xl sm:text-2xl font-sans text-neutral-900 tracking-tight font-bold mb-2">
-        Submission Complete
+      <h1 className="text-xl sm:text-2xl font-sans text-neutral-900 tracking-tight font-bold mb-3">
+        Completed
       </h1>
 
-      <p className="text-xs sm:text-sm text-neutral-500 mb-2 max-w-sm mx-auto leading-relaxed font-light">
-        Thank you. Your electronic liability release waiver is recorded for {location.locationDisplayName}.
+      <p className="text-xs sm:text-sm text-neutral-500 mb-6 max-w-sm mx-auto leading-relaxed font-light">
+        Thank you. Your waiver for {location.locationDisplayName} was submitted. A copy was emailed to the salon.
       </p>
-
-      <p className="text-xs sm:text-sm text-neutral-500 mb-8 max-w-sm mx-auto leading-relaxed font-light">
-        You can download a PDF copy for your records below.
-      </p>
-
-      <div className="bg-white border border-neutral-200/60 rounded-xl p-5 mb-8 text-left max-w-sm mx-auto shadow-sm">
-        <div className="flex items-start gap-3.5">
-          <div className="p-2 border border-neutral-200 text-neutral-700 rounded-lg mt-0.5">
-            <FileText size={18} />
-          </div>
-          <div className="flex-1">
-            <h4 className="font-semibold text-stone-800 text-xs uppercase tracking-wide">Client Record File</h4>
-            <p className="text-[11px] text-stone-500 mt-1 mb-3.5 leading-relaxed font-light">
-              Your registered PDF is validated. Download an offline duplicate for your personal records.
-            </p>
-            <button
-              type="button"
-              onClick={handleDownloadPDF}
-              className="w-full inline-flex items-center justify-center gap-1.5 text-xs font-semibold text-white bg-neutral-900 hover:bg-neutral-800 px-3.5 py-2.5 rounded-lg cursor-pointer transition shadow-sm"
-              id="download-backup-pdf-btn"
-            >
-              <Download size={13} />
-              Download Copy (PDF File)
-            </button>
-          </div>
-        </div>
-      </div>
 
       <div className="flex flex-col items-center justify-center gap-3">
         <button

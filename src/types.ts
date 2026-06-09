@@ -46,6 +46,8 @@ export interface WaiverSubmissionPayload extends WaiverFormData {
   pdfFilename: string;
   submittedAtISO: string;
   waiverMeta: WaiverSubmissionMeta;
+  /** One id per submit attempt; Apps Script ignores duplicate POSTs with the same id (stops double emails). */
+  submissionId: string;
 }
 
 export interface WaiverFormData {
@@ -60,9 +62,10 @@ export interface WaiverFormData {
   skinConditions: SkinConditions;
   medicalQuestions: MedicalQuestions;
   acceptedTerms: boolean;
+  /** Human-readable submission time (set when the waiver is submitted). */
   signatureDate: string;
-  /** PNG data URL (base64) — set after the client taps “Save signature”. */
+  /** PNG data URL (base64); updated automatically as the client signs. */
   signatureImage: string;
-  /** Set after successful submit (used for PDF download on success page). */
+  /** Set after successful submit (success screen / records). */
   submittedAtISO?: string;
 }

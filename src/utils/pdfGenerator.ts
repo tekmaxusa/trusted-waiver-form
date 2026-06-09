@@ -384,7 +384,7 @@ export async function generateWaiverPDF(
   doc.text(submitted, marginX + 42, currentY);
   currentY += 5;
   doc.setTextColor(87, 80, 75);
-  doc.text('Verification date & time (client-selected):', marginX + 5, currentY);
+  doc.text('Submission date & time:', marginX + 5, currentY);
   doc.setTextColor(28, 25, 23);
   const sigDateLines = doc.splitTextToSize(data.signatureDate || '—', pageWidth - marginX - 62);
   doc.text(sigDateLines, marginX + 62, currentY);

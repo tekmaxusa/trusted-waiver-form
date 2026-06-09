@@ -1,4 +1,4 @@
-import { useState, FormEvent, useEffect } from 'react';
+import { useState, FormEvent, useEffect, useRef } from 'react';
 import { Loader2 } from 'lucide-react';
 import { WaiverFormData, WaiverSubmissionMeta, WaiverSubmissionPayload } from '../types';
 import SignaturePad from './SignaturePad';
@@ -64,51 +64,13 @@ export default function WaiverForm({ onSubmitSuccess, location }: WaiverFormProp
   const [formData, setFormData] = useState<WaiverFormData>(getInitialFormData());
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+  /** Blocks double-submit before React re-renders disabled state (common cause of duplicate emails). */
+  const submitGuardRef = useRef(false);
   /** Lets the button show why the wait feels long (PDF vs network). */
   const [submitUiPhase, setSubmitUiPhase] = useState<'pdf' | 'send'>('pdf');
-  const [selectedDateTime, setSelectedDateTime] = useState('');
-
-  const formatToReadableDateTime = (dateTimeString: string): string => {
-    if (!dateTimeString) return '';
-    const date = new Date(dateTimeString);
-    if (Number.isNaN(date.getTime())) return dateTimeString;
-    return date.toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: true,
-    });
-  };
 
   useEffect(() => {
     void resolveGasWebAppUrl();
-  }, []);
-
-  useEffect(() => {
-    const now = new Date();
-    const year = now.getFullYear();
-    const month = String(now.getMonth() + 1).padStart(2, '0');
-    const day = String(now.getDate()).padStart(2, '0');
-    const hours = String(now.getHours()).padStart(2, '0');
-    const minutes = String(now.getMinutes()).padStart(2, '0');
-    const initialDateTimeLocal = `${year}-${month}-${day}T${hours}:${minutes}`;
-
-    setSelectedDateTime(initialDateTimeLocal);
-
-    const formattedDate = now.toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: true,
-    });
-    setFormData((prev) => ({
-      ...prev,
-      signatureDate: formattedDate,
-    }));
   }, []);
 
   const clearFieldError = (key: string) => {
@@ -202,7 +164,7 @@ export default function WaiverForm({ onSubmitSuccess, location }: WaiverFormProp
     }
 
     if (!formData.signatureImage) {
-      newErrors.signatureImage = 'Draw your signature and tap Save signature';
+      newErrors.signatureImage = 'Draw your signature in the signature box';
     }
 
     setErrors(newErrors);
@@ -224,18 +186,38 @@ export default function WaiverForm({ onSubmitSuccess, location }: WaiverFormProp
     if (!validateForm()) {
       return;
     }
+    if (submitGuardRef.current) {
+      return;
+    }
+    submitGuardRef.current = true;
 
     setIsSubmitting(true);
     setSubmitUiPhase('pdf');
     await yieldToMainThread();
 
     const submittedAtISO = new Date().toISOString();
+    const submissionId = crypto.randomUUID();
+    const submittedAt = new Date(submittedAtISO);
+    const signatureDate = submittedAt.toLocaleString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true,
+    });
+    const formDataForSubmit: WaiverFormData = { ...formData, signatureDate };
 
     try {
-      const gasUrlPromise = resolveGasWebAppUrl();
       const branding = pdfBrandingForLocation(location);
-      const { doc, filename } = await generateWaiverPDF(formData, submittedAtISO, branding);
-      const base64PdfPart = await getPdfBase64FromJsPDF(doc);
+      const [gasUrl, pdfParts] = await Promise.all([
+        resolveGasWebAppUrl(),
+        (async () => {
+          const { doc, filename } = await generateWaiverPDF(formDataForSubmit, submittedAtISO, branding);
+          const base64PdfPart = await getPdfBase64FromJsPDF(doc);
+          return { filename, base64PdfPart };
+        })(),
+      ]);
 
       const waiverMeta: WaiverSubmissionMeta = {
         merchantSlug: location.merchantSlug,
@@ -247,15 +229,15 @@ export default function WaiverForm({ onSubmitSuccess, location }: WaiverFormProp
       };
 
       const submissionPayload: WaiverSubmissionPayload = {
-        ...formData,
+        ...formDataForSubmit,
         submittedAtISO,
-        pdfBase64: base64PdfPart,
-        pdfFilename: filename,
+        pdfBase64: pdfParts.base64PdfPart,
+        pdfFilename: pdfParts.filename,
         waiverMeta,
+        submissionId,
       };
 
       setSubmitUiPhase('send');
-      const gasUrl = await gasUrlPromise;
       if (gasUrl) {
         const payload = JSON.stringify(submissionPayload);
         const body = new URLSearchParams();
@@ -291,19 +273,16 @@ export default function WaiverForm({ onSubmitSuccess, location }: WaiverFormProp
       }
 
       onSubmitSuccess({
-        ...formData,
+        ...formDataForSubmit,
         submittedAtISO,
       });
     } catch (err) {
       console.error('Waiver submission failure:', err);
       alert(
-        'We saved your waiver on this device but the server connection had a problem. Tap OK to continue; you can download your PDF from the next screen.'
+        'We could not finish sending your waiver. Please check your connection and try again. If it keeps failing, contact the salon.'
       );
-      onSubmitSuccess({
-        ...formData,
-        submittedAtISO,
-      });
     } finally {
+      submitGuardRef.current = false;
       setIsSubmitting(false);
       setSubmitUiPhase('pdf');
     }
@@ -362,7 +341,7 @@ export default function WaiverForm({ onSubmitSuccess, location }: WaiverFormProp
                   ? 'border-red-400 focus:border-red-500 focus:ring-red-100'
                   : 'border-neutral-200 focus:border-neutral-900 focus:ring-neutral-100'
               }`}
-              placeholder="0905 123 4567"
+              placeholder="(555) 000-0000"
             />
             {errors.phoneNumber ? (
               <p className="text-xs text-red-600" id="phoneNumber-error" role="alert">
@@ -510,16 +489,24 @@ export default function WaiverForm({ onSubmitSuccess, location }: WaiverFormProp
         className="bg-white rounded-lg p-3 sm:p-4 border border-neutral-200/60 shadow-sm space-y-3"
         id="section-medical-questions"
       >
-        <div className="space-y-3">
-        <fieldset id="err-container-medicalQuestions-takingMedications" className="space-y-2 border-0 p-0 m-0">
-          <legend className="text-xs font-medium text-neutral-800 leading-snug px-0">
-            Are you currently taking any medications (including topical)? <span className="text-red-500">*</span>
-          </legend>
-          <div className="flex flex-wrap gap-2" role="group" aria-label="Medications">
+        <div className="flex flex-col gap-4 sm:gap-5">
+          <div
+            id="err-container-medicalQuestions-takingMedications"
+            className="rounded-lg border border-neutral-200 bg-white px-3 py-2.5 sm:px-3.5 sm:py-3"
+          >
+            <p className="text-xs font-medium leading-snug text-neutral-800" id="medical-q-medications-label">
+              Are you currently taking any medications (including topical)?{' '}
+              <span className="text-red-500">*</span>
+            </p>
+            <div
+              className="mt-2 flex flex-wrap gap-2"
+              role="group"
+              aria-labelledby="medical-q-medications-label"
+            >
               <button
                 type="button"
                 onClick={() => handleMedicalQuestionChange('takingMedications', true)}
-                className={`px-4 py-1.5 text-xs font-semibold rounded-lg border transition-colors ${
+                className={`px-4 py-1.5 text-xs font-semibold rounded-md border transition-colors ${
                   formData.medicalQuestions.takingMedications === true
                     ? 'bg-neutral-900 border-neutral-900 text-white'
                     : 'bg-white border-neutral-200 text-neutral-600 hover:border-neutral-300'
@@ -530,7 +517,7 @@ export default function WaiverForm({ onSubmitSuccess, location }: WaiverFormProp
               <button
                 type="button"
                 onClick={() => handleMedicalQuestionChange('takingMedications', false)}
-                className={`px-4 py-1.5 text-xs font-semibold rounded-lg border transition-colors ${
+                className={`px-4 py-1.5 text-xs font-semibold rounded-md border transition-colors ${
                   formData.medicalQuestions.takingMedications === false
                     ? 'bg-neutral-900 border-neutral-900 text-white'
                     : 'bg-white border-neutral-200 text-neutral-600 hover:border-neutral-300'
@@ -540,24 +527,29 @@ export default function WaiverForm({ onSubmitSuccess, location }: WaiverFormProp
               </button>
             </div>
             {errors['medicalQuestions.takingMedications'] ? (
-              <p className="text-xs text-red-600" role="alert">
+              <p className="mt-1.5 text-xs text-red-600" role="alert">
                 {errors['medicalQuestions.takingMedications']}
               </p>
             ) : null}
-          </fieldset>
+          </div>
 
-          <fieldset
+          <div
             id="err-container-medicalQuestions-takingRetinolAccutane"
-            className="space-y-2 border-0 p-0 m-0 pt-3 border-t border-neutral-100"
+            className="rounded-lg border border-neutral-200 bg-white px-3 py-2.5 sm:px-3.5 sm:py-3"
           >
-            <legend className="text-xs font-medium text-neutral-800 leading-snug px-0">
-              Are you currently taking any Retinol, Accutane, Hydroquinone? <span className="text-red-500">*</span>
-            </legend>
-            <div className="flex flex-wrap gap-2" role="group" aria-label="Retinol Accutane Hydroquinone">
+            <p className="text-xs font-medium leading-snug text-neutral-800" id="medical-q-retinol-label">
+              Are you currently taking any Retinol, Accutane, Hydroquinone?{' '}
+              <span className="text-red-500">*</span>
+            </p>
+            <div
+              className="mt-2 flex flex-wrap gap-2"
+              role="group"
+              aria-labelledby="medical-q-retinol-label"
+            >
               <button
                 type="button"
                 onClick={() => handleMedicalQuestionChange('takingRetinolAccutane', true)}
-                className={`px-4 py-1.5 text-xs font-semibold rounded-lg border transition-colors ${
+                className={`px-4 py-1.5 text-xs font-semibold rounded-md border transition-colors ${
                   formData.medicalQuestions.takingRetinolAccutane === true
                     ? 'bg-neutral-900 border-neutral-900 text-white'
                     : 'bg-white border-neutral-200 text-neutral-600 hover:border-neutral-300'
@@ -568,7 +560,7 @@ export default function WaiverForm({ onSubmitSuccess, location }: WaiverFormProp
               <button
                 type="button"
                 onClick={() => handleMedicalQuestionChange('takingRetinolAccutane', false)}
-                className={`px-4 py-1.5 text-xs font-semibold rounded-lg border transition-colors ${
+                className={`px-4 py-1.5 text-xs font-semibold rounded-md border transition-colors ${
                   formData.medicalQuestions.takingRetinolAccutane === false
                     ? 'bg-neutral-900 border-neutral-900 text-white'
                     : 'bg-white border-neutral-200 text-neutral-600 hover:border-neutral-300'
@@ -578,11 +570,11 @@ export default function WaiverForm({ onSubmitSuccess, location }: WaiverFormProp
               </button>
             </div>
             {errors['medicalQuestions.takingRetinolAccutane'] ? (
-              <p className="text-xs text-red-600" role="alert">
+              <p className="mt-1.5 text-xs text-red-600" role="alert">
                 {errors['medicalQuestions.takingRetinolAccutane']}
               </p>
             ) : null}
-          </fieldset>
+          </div>
         </div>
       </section>
 
@@ -651,26 +643,6 @@ export default function WaiverForm({ onSubmitSuccess, location }: WaiverFormProp
             }}
           />
         </div>
-
-        <div className="space-y-1 max-w-md">
-          <label htmlFor="signature-date-picker" className="block text-xs font-medium text-neutral-600">
-            Date / Time <span className="text-red-500">*</span>
-          </label>
-          <input
-            type="datetime-local"
-            id="signature-date-picker"
-            value={selectedDateTime}
-            onChange={(e) => {
-              const val = e.target.value;
-              setSelectedDateTime(val);
-              setFormData((prev) => ({
-                ...prev,
-                signatureDate: formatToReadableDateTime(val),
-              }));
-            }}
-            className="w-full px-3 py-2 bg-white border border-neutral-200 rounded-lg text-sm text-neutral-800 focus:outline-none focus:ring-2 focus:ring-neutral-100 focus:border-neutral-900"
-          />
-        </div>
       </section>
 
       <div className="pt-1 flex flex-col items-stretch sm:items-center gap-2 max-w-md mx-auto w-full">
@@ -690,7 +662,7 @@ export default function WaiverForm({ onSubmitSuccess, location }: WaiverFormProp
           )}
         </button>
         <p className="text-xs text-neutral-500 text-center leading-relaxed">
-          Submitting creates a PDF record and sends it when Google Apps Script is configured.
+          Submitting builds your waiver PDF and emails it to the salon when Apps Script is configured.
         </p>
       </div>
     </form>

@@ -1,5 +1,5 @@
 import { useRef, useState, useEffect, MouseEvent, TouchEvent } from 'react';
-import { Eraser, ImageDown } from 'lucide-react';
+import { Eraser } from 'lucide-react';
 
 interface SignaturePadProps {
   onSave: (base64Image: string) => void;
@@ -17,6 +17,7 @@ export default function SignaturePad({
 }: SignaturePadProps) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
+  const hasInkRef = useRef(false);
   const [isDrawing, setIsDrawing] = useState(false);
   const [hasInk, setHasInk] = useState(false);
 
@@ -65,6 +66,7 @@ export default function SignaturePad({
       ctx.restore();
       layoutCanvas();
       setHasInk(false);
+      hasInkRef.current = false;
     }
   }, [committedSignature]);
 
@@ -111,10 +113,18 @@ export default function SignaturePad({
     ctx.lineTo(coords.x, coords.y);
     ctx.stroke();
     setHasInk(true);
+    hasInkRef.current = true;
   };
 
   const stopDrawing = () => {
+    if (!isDrawing) return;
     setIsDrawing(false);
+    if (hasInkRef.current) {
+      const canvas = canvasRef.current;
+      if (canvas) {
+        onSave(canvas.toDataURL('image/png'));
+      }
+    }
   };
 
   const handleClear = (e: MouseEvent) => {
@@ -129,15 +139,8 @@ export default function SignaturePad({
     ctx.restore();
     layoutCanvas();
     setHasInk(false);
+    hasInkRef.current = false;
     onClear();
-  };
-
-  const handleSaveImage = (e: MouseEvent) => {
-    e.preventDefault();
-    const canvas = canvasRef.current;
-    if (!canvas || !hasInk) return;
-    const dataUrl = canvas.toDataURL('image/png');
-    onSave(dataUrl);
   };
 
   return (
@@ -150,17 +153,6 @@ export default function SignaturePad({
           Client Signature <span className="text-red-500">*</span>
         </label>
         <div className="flex flex-wrap items-center gap-2">
-          <button
-            type="button"
-            id="save-signature-btn"
-            onClick={handleSaveImage}
-            disabled={!hasInk}
-            className="inline-flex items-center gap-1.5 text-[10px] font-bold text-white bg-neutral-900 hover:bg-neutral-800 disabled:opacity-40 disabled:pointer-events-none px-3 py-1.5 rounded-lg transition cursor-pointer"
-            aria-label="Save signature as image"
-          >
-            <ImageDown size={12} aria-hidden />
-            Save signature
-          </button>
           <button
             type="button"
             id="clear-signature-btn"
@@ -203,7 +195,7 @@ export default function SignaturePad({
 
       {committedSignature ? (
         <p className="text-[10px] text-emerald-700 font-medium" role="status">
-          Signature saved. Use Clear Signature to sign again.
+          Signature saved automatically. Use Clear Signature to sign again.
         </p>
       ) : null}
 
@@ -213,7 +205,7 @@ export default function SignaturePad({
         </p>
       ) : (
         <p className="text-[10px] text-neutral-400 font-normal">
-          Draw your signature, then tap <span className="font-semibold text-neutral-600">Save signature</span> to attach it to your waiver.
+          Your signature is saved automatically when you finish each stroke.
         </p>
       )}
     </div>

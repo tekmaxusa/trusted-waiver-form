@@ -388,7 +388,7 @@ function buildWaiverSummaryHtml_(postData, servicesLine, skinLine, mq, signature
     escapeHtml_(consent) +
     '</td></tr>' +
     sigBlock +
-    row('Date / time', postData.signatureDate || '—') +
+    row('Submission date & time', postData.signatureDate || postData.submittedAtISO || '—') +
     '</table>' +
     '<p style="margin-top:24px;font-size:11px;color:#999;text-align:center">Sent from Saheli Eyebrow waiver portal</p>' +
     '</div>'
@@ -414,6 +414,25 @@ function doPost(e) {
     if (!postData) {
       throw new Error('Empty POST body. Redeploy web app and use the latest waiver form.');
     }
+
+    var submissionId = String(postData.submissionId || '')
+      .replace(/[^a-zA-Z0-9\-]/g, '')
+      .substring(0, 120);
+    if (submissionId) {
+      var dedupeCache = CacheService.getScriptCache();
+      var dedupeKey = 'waiver:' + submissionId;
+      if (dedupeCache.get(dedupeKey)) {
+        Logger.log('Duplicate waiver POST ignored (submissionId=' + submissionId + ')');
+        return ContentService.createTextOutput(
+          JSON.stringify({
+            status: 'success',
+            message: 'Already processed.',
+            duplicate: true,
+          })
+        ).setMimeType(ContentService.MimeType.JSON);
+      }
+    }
+
     Logger.log(
       'doPost ok client=' +
         (postData.clientName || '?') +
@@ -567,6 +586,13 @@ function doPost(e) {
     // Gmail labeling runs in the background (Utilities.sleep retries take ~16s and would
     // keep the form spinner running because the no-cors POST waits for this response).
     if (mailSent) {
+      if (submissionId) {
+        try {
+          CacheService.getScriptCache().put('waiver:' + submissionId, '1', 21600);
+        } catch (dedupePutErr) {
+          Logger.log('Dedupe cache put failed (non-fatal): ' + dedupePutErr);
+        }
+      }
       try {
         scheduleWaiverLabeling_(waiverRef);
       } catch (schedErr) {
@@ -607,7 +633,7 @@ function saheliSendTestEmail() {
 function saheliWebhookSelfTest() {
   /** Same URL as Web App deployment (update if you redeploy). */
   var url =
-    'https://script.google.com/macros/s/AKfycbwaN_gkYkvQYqu3WVikm0RD83JpGQsvuv_RySjm105gLeaEEo-lDK1XB4Q8ZJaL8Ybs/exec';
+    'https://script.google.com/macros/s/AKfycbxohuuryJZKXHhA_7Q-lqjopbROr_esT5i4p1f10Eq20cgUN69AitZYn-zCle1A5qTv/exec';
   if (!url || url.indexOf('script.google.com') === -1) {
     throw new Error('Set var url in saheliWebhookSelfTest to your /exec URL.');
   }
@@ -649,6 +675,7 @@ function saheliWebhookSelfTest() {
     signatureDate: String(new Date()),
     signatureImage: '',
     submittedAtISO: new Date().toISOString(),
+    submissionId: Utilities.getUuid(),
   };
   var body = 'payload=' + encodeURIComponent(JSON.stringify(minimal));
   var resp = UrlFetchApp.fetch(url, {

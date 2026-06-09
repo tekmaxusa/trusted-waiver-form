@@ -55,7 +55,7 @@ export default function App({ location }: AppProps) {
 
       <main className="flex-1 py-4 px-3 sm:py-6 sm:px-4 max-w-4xl w-full mx-auto">
         {submittedData ? (
-          <SuccessPage submittedData={submittedData} onReset={handleReset} location={location} />
+          <SuccessPage onReset={handleReset} location={location} />
         ) : (
           <div className="space-y-3">
             <h1 className="text-lg sm:text-xl font-semibold text-neutral-900 tracking-tight">
